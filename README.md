@@ -1,12 +1,14 @@
 
 
-# Modern LLM and RAG Stack Architecture
+# Build a RAG agent with LangChain
 
 This document outlines the core dependencies used in our Retrieval-Augmented Generation (RAG) and Large Language Model (LLM) applications. 
 
 Recently, the LangChain ecosystem underwent a major architectural shift to become more modular. Instead of a single monolithic package, integrations and core logic are now split into specialized packages. This improves dependency management, security, and integration updates.
 
+[Learn More >>>](https://docs.langchain.com/oss/python/langchain/rag)
 
+---
 
 Below is the breakdown of the packages powering our stack, their responsibilities, and how they are typically used.
 
