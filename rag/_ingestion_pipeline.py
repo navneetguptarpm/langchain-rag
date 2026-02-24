@@ -9,72 +9,53 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# This script demonstrates how to load documents from a directory using LangChain's DirectoryLoader and TextLoader.
 def load_documents_from_directory(directory_path):
-    # Check if the directory exists
+    """Load all .txt files from the specified directory."""
     if not os.path.exists(directory_path):
         raise FileNotFoundError(f"Directory '{directory_path}' does not exist.")
-    
-    # Use DirectoryLoader to load all .txt files in the directory
+
     loader = DirectoryLoader(path=directory_path, glob="*.txt", loader_cls=TextLoader)
     documents = loader.load()
 
-    # Check if any documents were loaded
     if not documents:
         raise ValueError(f"No text files found in directory '{directory_path}'.")
-    
-    # Show the number of documents loaded
+
     print(f"Loaded {len(documents)} documents from '{directory_path}'.")
+    return documents
 
-    return documents # Return the loaded documents as a list of Document objects (with 'page_content' and 'metadata' attributes)
-
-def split_documents(documents, chunk_size=1000, chunk_overlap=0):
-    # Use CharacterTextSplitter to split the documents into smaller chunks
+def split_documents(documents, chunk_size=1000, chunk_overlap=100):
+    """Split documents into smaller overlapping chunks for better retrieval."""
     text_splitter = CharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     chunks = text_splitter.split_documents(documents)
-
-    # Show the number of chunks created
-    print(f"Split documents into {len(chunks)} chunks (chunk size: {chunk_size} characters).")
-
-    return chunks # Return the list of split Document objects
+    print(f"Split {len(documents)} documents into {len(chunks)} chunks (size: {chunk_size}, overlap: {chunk_overlap}).")
+    return chunks
 
 def create_vector_store(chunks, persist_directory="db/vector_store"):
-    # Create OpenAI embeddings for the chunks
+    """Embed chunks and persist them into a Chroma vector store."""
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-
-    # Create a Chroma vector store from the chunks and persist it to disk
-    vector_store = Chroma.from_documents(chunks, embeddings, persist_directory=persist_directory, collection_metadata={"hnsw:space": "cosine"})
-
-    # Show a message indicating that the vector store has been created and persisted
-    print(f"Created vector store with {len(chunks)} chunks and persisted to '{persist_directory}'.")
-
-    return vector_store # Return the created Chroma vector store
+    vector_store = Chroma.from_documents(
+        chunks,
+        embeddings,
+        persist_directory=persist_directory,
+        collection_metadata={"hnsw:space": "cosine"}
+    )
+    print(f"Vector store created with {len(chunks)} chunks and persisted to '{persist_directory}'.")
+    return vector_store
 
 def main():
-    directory_path = "data"  # Replace with your directory path
-    documents = load_documents_from_directory(directory_path) # Load documents from the specified directory
+    directory_path = "data"
+    persist_directory = "db/vector_store"
 
-    # Print the first document object to see its structure (it should have 'page_content' and 'metadata' attributes)
-    # if documents:
-    #     for i, doc in enumerate(documents):
-    #         print(f"Document {i+1}:")
-    #         print(f'Content Length: {len(doc.page_content)} characters')  # Print the length of the content
-    #         print(f"Content: {doc.page_content[:100]}...")  # Print the first 100 characters of the content
-    #         print(f"Metadata: {doc.metadata}")  # Print the metadata
-    #         print("-" * 40)  # Separator between documents
-    # else:
-    #     print("No documents were loaded.")
+    # Step 1: Load raw documents from the data directory
+    documents = load_documents_from_directory(directory_path)
 
-    chunks = split_documents(documents) # Split the loaded documents into smaller chunks
+    # Step 2: Split documents into chunks
+    chunks = split_documents(documents, chunk_size=1000, chunk_overlap=100)
 
-    # for i, chunk in enumerate(chunks[:5]):  # Print the first 5 chunks to see their structure
-    #     print(f"Chunk {i+1}:")
-    #     print(f'Content Length: {len(chunk.page_content)} characters')  # Print the length of the chunk content
-    #     print(f"Content: {chunk.page_content}")  # Print the first 100 characters of the chunk content
-    #     print(f"Metadata: {chunk.metadata}")  # Print the metadata of the chunk
-    #     print("-" * 40)  # Separator between chunks
+    # Step 3: Embed chunks and store in Chroma vector store
+    vector_store = create_vector_store(chunks, persist_directory=persist_directory)
 
-    vector_store = create_vector_store(chunks) # Create a Chroma vector store from the chunks and persist it to disk
+    print("\nIngestion pipeline complete! Knowledge base is ready.")
 
 if __name__ == "__main__":
     main()
