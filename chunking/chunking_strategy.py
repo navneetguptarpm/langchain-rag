@@ -21,8 +21,7 @@ from pydantic import BaseModel, Field
 # Load environment variables (e.g., OPENAI_API_KEY)
 load_dotenv()
 
-# --- HELPER FUNCTIONS ---
-
+# Helper functions for loading documents and printing chunks
 def load_documents_from_directory(directory_path="data"):
     """Loads text documents from a directory."""
     if not os.path.exists(directory_path):
@@ -41,9 +40,7 @@ def print_chunks(chunks, strategy_name):
         content = chunk.page_content if hasattr(chunk, 'page_content') else chunk
         print(f"Chunk {i+1} ({len(content)} chars):\n{content}\n{'-' * 50}")
 
-
-# --- STRATEGY 1: CHARACTER SPLITTING ---
-
+# 1. Character Splitter
 def strategy_1_character(documents):
     """Splits blindly by a specific character (\n\n by default)."""
     text_splitter = CharacterTextSplitter(
@@ -53,9 +50,7 @@ def strategy_1_character(documents):
     )
     return text_splitter.split_documents(documents)
 
-
-# --- STRATEGY 2: RECURSIVE CHARACTER SPLITTING ---
-
+# 2. Recursive Splitter
 def strategy_2_recursive(documents):
     """Best practice default. Falls back through separators (\n\n -> \n -> space) to keep sizes."""
     text_splitter = RecursiveCharacterTextSplitter(
@@ -65,9 +60,7 @@ def strategy_2_recursive(documents):
     )
     return text_splitter.split_documents(documents)
 
-
-# --- STRATEGY 3: DOCUMENT SPECIFIC SPLITTING (MARKDOWN) ---
-
+# 3. Document Specific Splitter (Markdown Headers)
 def strategy_3_markdown(markdown_text):
     """Splits based on markdown headers. 
     Best Practice: We pipe the output into a Recursive splitter to enforce the 100 char limit!"""
@@ -85,9 +78,7 @@ def strategy_3_markdown(markdown_text):
     recursive_splitter = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=20)
     return recursive_splitter.split_documents(md_header_splits)
 
-
-# --- STRATEGY 4: SEMANTIC SPLITTING ---
-
+# 4. Semantic Splitter
 def strategy_4_semantic(documents):
     """Splits by meaning. 
     Note: chunk_size=100 is NOT used here. It splits when topics change."""
@@ -101,10 +92,7 @@ def strategy_4_semantic(documents):
     )
     return semantic_chunker.split_documents(documents)
 
-
-# --- STRATEGY 5: AGENTIC (PROPOSITIONAL) SPLITTING ---
-
-# Define the structured output we want the LLM to return
+# 5. Agentic Splitter (LLM-based Structured Output)
 class Propositions(BaseModel):
     sentences: list[str] = Field(
         description="A list of standalone, decontextualized propositions or facts extracted from the text."
@@ -127,9 +115,6 @@ def strategy_5_agentic(text):
     
     result = structured_llm.invoke(prompt)
     return result.sentences
-
-
-# --- MAIN EXECUTION ---
 
 def main():
     docs = load_documents_from_directory("data")
